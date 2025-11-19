@@ -1,9 +1,11 @@
 import { Header } from "@/components/Header";
 import { TradeCard } from "@/components/TradeCard";
+import { CreateTradeDialog } from "@/components/CreateTradeDialog";
 import { Shield, Lock, CheckCircle, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
-const mockTrades = [
+const initialTrades = [
   {
     id: "1",
     buyer: "TechCorp Industries",
@@ -40,6 +42,12 @@ const mockTrades = [
 ];
 
 const Index = () => {
+  const [trades, setTrades] = useState(initialTrades);
+
+  const handleCreateTrade = (newTrade: any) => {
+    setTrades(prev => [newTrade, ...prev]);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -58,9 +66,7 @@ const Index = () => {
               Field-level encryption for trade settlements. Only approved partners can decrypt protected values after mutual confirmation.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
-                Upload Trade Contract
-              </Button>
+              <CreateTradeDialog onCreateTrade={handleCreateTrade} />
               <Button size="lg" variant="outline">
                 View Documentation
               </Button>
@@ -111,9 +117,18 @@ const Index = () => {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockTrades.map(trade => (
-              <TradeCard key={trade.id} {...trade} />
-            ))}
+            {trades.length > 0 ? (
+              trades.map(trade => (
+                <TradeCard key={trade.id} {...trade} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground mb-4">No trade contracts yet</p>
+                <CreateTradeDialog onCreateTrade={handleCreateTrade}>
+                  <Button variant="outline">Create Your First Trade</Button>
+                </CreateTradeDialog>
+              </div>
+            )}
           </div>
         </div>
       </section>
