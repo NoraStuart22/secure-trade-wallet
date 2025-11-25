@@ -521,11 +521,10 @@ export default function ExpenseLedger() {
 
                 {weeklyTotal && (
                   <div className="space-y-4 pt-4">
-                    {isProjectManager && (
-                      decryptedValues.weeklyMaterial === undefined ||
+                    {isProjectManager && 
+                     (decryptedValues.weeklyMaterial === undefined ||
                       decryptedValues.weeklyLabor === undefined ||
-                      decryptedValues.weeklyRental === undefined
-                    ) && (
+                      decryptedValues.weeklyRental === undefined) && (
                       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-sm text-blue-800 mb-3 font-medium">
                           Decrypt weekly totals to view the actual amounts
@@ -559,6 +558,48 @@ export default function ExpenseLedger() {
                             }
                           }}
                           disabled={isLoading}
+                          className="w-full"
+                          size="lg"
+                        >
+                          <Unlock className="h-4 w-4 mr-2" />
+                          Decrypt All Weekly Totals
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Always show decrypt button for project manager, even if some values are decrypted */}
+                    {isProjectManager && weeklyTotal && (
+                      <div className="mb-4">
+                        <Button
+                          onClick={async () => {
+                            if (!weeklyTotal) return;
+                            try {
+                              toast.info("Decrypting all weekly totals...");
+                              
+                              // Wait a bit for permissions
+                              await new Promise(resolve => setTimeout(resolve, 2000));
+                              
+                              const [material, labor, rental] = await Promise.all([
+                                decryptExpense(weeklyTotal.materialCost),
+                                decryptExpense(weeklyTotal.laborCost),
+                                decryptExpense(weeklyTotal.rentalCost),
+                              ]);
+                              
+                              setDecryptedValues((prev) => ({
+                                ...prev,
+                                weeklyMaterial: material,
+                                weeklyLabor: labor,
+                                weeklyRental: rental,
+                              }));
+                              
+                              toast.success(`Decrypted: Material $${material}, Labor $${labor}, Rental $${rental}`);
+                            } catch (error: any) {
+                              console.error("[ExpenseLedger] Manual decrypt error:", error);
+                              toast.error(`Decryption failed: ${error.message || "Unknown error"}`);
+                            }
+                          }}
+                          disabled={isLoading}
+                          variant="default"
                           className="w-full"
                           size="lg"
                         >
