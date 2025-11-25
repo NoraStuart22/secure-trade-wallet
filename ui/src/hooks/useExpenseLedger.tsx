@@ -295,31 +295,40 @@ export function useExpenseLedger(contractAddress: string | undefined): UseExpens
         // Call the view function directly (it's a view function, so it won't send a transaction)
         // Retry logic in case the state hasn't fully updated yet
         let totalMaterial, totalLabor, totalRental, exists;
-        let retries = 3;
+        let retries = 5;
         let lastError;
         
         while (retries > 0) {
           try {
-            [totalMaterial, totalLabor, totalRental, exists] = await readContract.getWeeklyTotal(weekStartDate);
+            // Use callStatic to ensure it's a read-only call
+            const result = await readContract.getWeeklyTotal.staticCall(weekStartDate);
+            [totalMaterial, totalLabor, totalRental, exists] = result;
+            
+            console.log("[useExpenseLedger] Read weekly total:", { exists, retries });
+            
             if (exists) {
               break; // Success, exit retry loop
+            } else {
+              // If doesn't exist yet, wait and retry
+              console.log("[useExpenseLedger] Weekly total not found yet, retrying...");
             }
           } catch (readError: any) {
             lastError = readError;
             console.warn(`[useExpenseLedger] Error reading weekly total (${retries} retries left):`, readError);
-            if (retries > 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+          }
+          
+          if (retries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
           }
           retries--;
         }
         
-        if (!exists || retries === 0) {
+        if (!exists) {
           if (lastError) {
             console.error("[useExpenseLedger] Final error reading weekly total:", lastError);
-            throw new Error(`Failed to read weekly total after retries: ${lastError.message || String(lastError)}`);
+            throw new Error(`Failed to read weekly total after retries. The calculation may have failed or the data is not available yet. Error: ${lastError.message || String(lastError)}`);
           }
-          throw new Error("Weekly total calculation completed but result not found");
+          throw new Error("Weekly total calculation completed but result not found. Please try again in a few seconds.");
         }
 
         setMessage("Weekly total calculated successfully!");

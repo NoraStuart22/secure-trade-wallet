@@ -29,6 +29,10 @@ contract ConstructionExpenseLedger is SepoliaConfig {
     // Array to store all expense dates for iteration
     uint256[] private _expenseDates;
     
+    // Mapping to store calculated weekly totals
+    mapping(uint256 => DailyExpense) private _weeklyTotals;
+    mapping(uint256 => bool) private _weeklyTotalCalculated;
+    
     event ExpenseRecorded(
         address indexed recorder,
         uint256 indexed date,
@@ -130,19 +134,9 @@ contract ConstructionExpenseLedger is SepoliaConfig {
         );
     }
     
-    /// @notice Calculate encrypted weekly total expenses
+    /// @notice Calculate and store encrypted weekly total expenses
     /// @param weekStartDate Start date of the week (in days since epoch)
-    /// @return totalMaterialCost Encrypted total material cost for the week
-    /// @return totalLaborCost Encrypted total labor cost for the week
-    /// @return totalRentalCost Encrypted total rental cost for the week
-    function calculateWeeklyTotal(uint256 weekStartDate)
-        external
-        returns (
-            euint32 totalMaterialCost,
-            euint32 totalLaborCost,
-            euint32 totalRentalCost
-        )
-    {
+    function calculateWeeklyTotal(uint256 weekStartDate) external {
         euint32 weekMaterial = FHE.asEuint32(0);
         euint32 weekLabor = FHE.asEuint32(0);
         euint32 weekRental = FHE.asEuint32(0);
@@ -158,6 +152,16 @@ contract ConstructionExpenseLedger is SepoliaConfig {
             }
         }
         
+        // Store the weekly totals
+        _weeklyTotals[weekStartDate] = DailyExpense({
+            materialCost: weekMaterial,
+            laborCost: weekLabor,
+            rentalCost: weekRental,
+            timestamp: block.timestamp,
+            exists: true
+        });
+        _weeklyTotalCalculated[weekStartDate] = true;
+        
         // Grant decryption permissions to project manager for weekly totals
         FHE.allowThis(weekMaterial);
         FHE.allow(weekMaterial, projectManager);
@@ -168,7 +172,39 @@ contract ConstructionExpenseLedger is SepoliaConfig {
         FHE.allowThis(weekRental);
         FHE.allow(weekRental, projectManager);
         
-        return (weekMaterial, weekLabor, weekRental);
+        emit WeeklyTotalCalculated(weekStartDate, block.timestamp);
+    }
+    
+    /// @notice Get encrypted weekly total expenses for a specific week
+    /// @param weekStartDate Start date of the week (in days since epoch)
+    /// @return materialCost Encrypted total material cost for the week
+    /// @return laborCost Encrypted total labor cost for the week
+    /// @return rentalCost Encrypted total rental cost for the week
+    /// @return exists Whether the weekly total has been calculated
+    function getWeeklyTotal(uint256 weekStartDate)
+        external
+        view
+        returns (
+            euint32 materialCost,
+            euint32 laborCost,
+            euint32 rentalCost,
+            bool exists
+        )
+    {
+        exists = _weeklyTotalCalculated[weekStartDate];
+        if (!exists) {
+            // Return uninitialized values - caller should check exists flag
+            DailyExpense memory empty;
+            return (empty.materialCost, empty.laborCost, empty.rentalCost, false);
+        }
+        
+        DailyExpense memory weeklyTotal = _weeklyTotals[weekStartDate];
+        return (
+            weeklyTotal.materialCost,
+            weeklyTotal.laborCost,
+            weeklyTotal.rentalCost,
+            weeklyTotal.exists
+        );
     }
     
     /// @notice Check if a date has been initialized
