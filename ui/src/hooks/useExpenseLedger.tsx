@@ -94,16 +94,38 @@ export function useExpenseLedger(contractAddress: string | undefined): UseExpens
   useEffect(() => {
     const checkProjectManager = async () => {
       if (!contractAddress || !ethersProvider || !address) {
+        console.log("[useExpenseLedger] Missing requirements for project manager check:", {
+          hasContractAddress: !!contractAddress,
+          hasProvider: !!ethersProvider,
+          hasAddress: !!address,
+        });
         setIsProjectManager(false);
         return;
       }
 
       try {
+        console.log("[useExpenseLedger] Checking project manager status...");
         const contract = new ethers.Contract(contractAddress, ConstructionExpenseLedgerABI, ethersProvider);
         const manager = await contract.projectManager();
-        setIsProjectManager(manager.toLowerCase() === address.toLowerCase());
+        const isManager = manager.toLowerCase() === address.toLowerCase();
+        
+        console.log("[useExpenseLedger] Project manager check:", {
+          contractManager: manager,
+          currentAddress: address,
+          isManager,
+        });
+        
+        setIsProjectManager(isManager);
+        
+        if (isManager) {
+          console.log("[useExpenseLedger] ✓ User is project manager");
+        } else {
+          console.log("[useExpenseLedger] ✗ User is NOT project manager");
+          console.log("[useExpenseLedger] Contract manager:", manager);
+          console.log("[useExpenseLedger] Current address:", address);
+        }
       } catch (error) {
-        console.error("Error checking project manager:", error);
+        console.error("[useExpenseLedger] Error checking project manager:", error);
         setIsProjectManager(false);
       }
     };
