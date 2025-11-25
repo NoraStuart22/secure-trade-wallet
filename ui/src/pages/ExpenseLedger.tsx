@@ -767,13 +767,18 @@ export default function ExpenseLedger() {
                               <p className="text-3xl font-bold text-green-600 mb-2">
                                 ${decryptedValues.weeklyMaterial.toLocaleString()}
                               </p>
-                              <p className="text-xs text-muted-foreground font-mono break-all">
-                                {weeklyTotal.materialCost}
-                              </p>
+                              <details className="mt-2">
+                                <summary className="text-xs text-muted-foreground cursor-pointer">
+                                  View encrypted value
+                                </summary>
+                                <p className="text-xs text-muted-foreground font-mono break-all mt-1">
+                                  {weeklyTotal.materialCost}
+                                </p>
+                              </details>
                             </div>
                           ) : (
                             <div>
-                              <p className="text-xs font-mono break-all mb-2">
+                              <p className="text-xs font-mono break-all mb-2 text-gray-700">
                                 {weeklyTotal.materialCost}
                               </p>
                               {isProjectManager && (
@@ -802,13 +807,18 @@ export default function ExpenseLedger() {
                               <p className="text-3xl font-bold text-green-600 mb-2">
                                 ${decryptedValues.weeklyLabor.toLocaleString()}
                               </p>
-                              <p className="text-xs text-muted-foreground font-mono break-all">
-                                {weeklyTotal.laborCost}
-                              </p>
+                              <details className="mt-2">
+                                <summary className="text-xs text-muted-foreground cursor-pointer">
+                                  View encrypted value
+                                </summary>
+                                <p className="text-xs text-muted-foreground font-mono break-all mt-1">
+                                  {weeklyTotal.laborCost}
+                                </p>
+                              </details>
                             </div>
                           ) : (
                             <div>
-                              <p className="text-xs font-mono break-all mb-2">
+                              <p className="text-xs font-mono break-all mb-2 text-gray-700">
                                 {weeklyTotal.laborCost}
                               </p>
                               {isProjectManager && (
@@ -837,13 +847,18 @@ export default function ExpenseLedger() {
                               <p className="text-3xl font-bold text-green-600 mb-2">
                                 ${decryptedValues.weeklyRental.toLocaleString()}
                               </p>
-                              <p className="text-xs text-muted-foreground font-mono break-all">
-                                {weeklyTotal.rentalCost}
-                              </p>
+                              <details className="mt-2">
+                                <summary className="text-xs text-muted-foreground cursor-pointer">
+                                  View encrypted value
+                                </summary>
+                                <p className="text-xs text-muted-foreground font-mono break-all mt-1">
+                                  {weeklyTotal.rentalCost}
+                                </p>
+                              </details>
                             </div>
                           ) : (
                             <div>
-                              <p className="text-xs font-mono break-all mb-2">
+                              <p className="text-xs font-mono break-all mb-2 text-gray-700">
                                 {weeklyTotal.rentalCost}
                               </p>
                               {isProjectManager && (
