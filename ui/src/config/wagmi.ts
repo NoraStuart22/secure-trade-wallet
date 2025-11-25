@@ -33,6 +33,48 @@ const localhost = defineChain({
 // For local development, you can safely ignore these 403 errors.
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '3fbb6bba6f1de962d911bb5b5c9ddd26';
 
+// Suppress console warnings for WalletConnect 403 errors in development
+// This must be done BEFORE getDefaultConfig is called
+if (import.meta.env.DEV) {
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  
+  console.error = (...args: any[]) => {
+    const message = args[0]?.toString() || '';
+    const fullMessage = args.map(arg => String(arg)).join(' ');
+    
+    // Filter out WalletConnect/Reown 403 warnings
+    if (
+      message.includes('Reown Config') ||
+      message.includes('Failed to fetch remote project configuration') ||
+      fullMessage.includes('HTTP status code: 403') ||
+      fullMessage.includes('not found on Allowlist') ||
+      fullMessage.includes('api.web3modal.org') ||
+      fullMessage.includes('pulse.walletconnect.org')
+    ) {
+      // Silently ignore these expected warnings
+      return;
+    }
+    originalError.apply(console, args);
+  };
+  
+  console.warn = (...args: any[]) => {
+    const message = args[0]?.toString() || '';
+    const fullMessage = args.map(arg => String(arg)).join(' ');
+    
+    // Filter out WalletConnect/Reown warnings
+    if (
+      fullMessage.includes('Reown') ||
+      fullMessage.includes('WalletConnect') ||
+      fullMessage.includes('web3modal') ||
+      fullMessage.includes('403')
+    ) {
+      return;
+    }
+    originalWarn.apply(console, args);
+  };
+}
+
 export const config = getDefaultConfig({
   appName: 'Trust Build Ledger',
   projectId: projectId,
@@ -41,21 +83,3 @@ export const config = getDefaultConfig({
   // Suppress WalletConnect remote config warnings for local development
   // These 403 errors are expected and harmless - RainbowKit falls back to browser extensions
 });
-
-// Suppress console warnings for WalletConnect 403 errors in development
-if (import.meta.env.DEV) {
-  const originalError = console.error;
-  console.error = (...args: any[]) => {
-    // Filter out WalletConnect/Reown 403 warnings
-    const message = args[0]?.toString() || '';
-    if (
-      message.includes('Reown Config') ||
-      message.includes('Failed to fetch remote project configuration') ||
-      message.includes('Origin') && message.includes('not found on Allowlist')
-    ) {
-      // Silently ignore these expected warnings
-      return;
-    }
-    originalError.apply(console, args);
-  };
-}
