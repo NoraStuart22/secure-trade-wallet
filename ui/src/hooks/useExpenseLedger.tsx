@@ -8,10 +8,12 @@ import { useFhevm } from "@/fhevm/useFhevm";
 const ConstructionExpenseLedgerABI = [
   "function recordDailyExpense(uint256 date, bytes32 encryptedMaterialCost, bytes32 encryptedLaborCost, bytes32 encryptedRentalCost, bytes calldata inputProof) external",
   "function getDailyExpense(uint256 date) external view returns (bytes32 materialCost, bytes32 laborCost, bytes32 rentalCost, bool exists)",
-  "function calculateWeeklyTotal(uint256 weekStartDate) external returns (bytes32 totalMaterialCost, bytes32 totalLaborCost, bytes32 totalRentalCost)",
+  "function calculateWeeklyTotal(uint256 weekStartDate) external",
+  "function getWeeklyTotal(uint256 weekStartDate) external view returns (bytes32 materialCost, bytes32 laborCost, bytes32 rentalCost, bool exists)",
   "function hasDateInitialized(uint256 date) external view returns (bool)",
   "function projectManager() external view returns (address)",
   "event ExpenseRecorded(address indexed recorder, uint256 indexed date, uint256 timestamp)",
+  "event WeeklyTotalCalculated(uint256 indexed weekStart, uint256 timestamp)",
 ] as const;
 
 interface UseExpenseLedgerState {
@@ -248,25 +250,69 @@ export function useExpenseLedger(contractAddress: string | undefined): UseExpens
 
   const calculateWeeklyTotal = useCallback(
     async (weekStartDate: number) => {
-      if (!contractAddress || !ethersProvider) {
-        return null;
+      if (!contractAddress || !ethersSigner || !ethersProvider) {
+        throw new Error("Wallet not connected or contract address not configured");
       }
 
       try {
-        const contract = new ethers.Contract(contractAddress, ConstructionExpenseLedgerABI, ethersProvider);
-        const [totalMaterial, totalLabor, totalRental] = await contract.calculateWeeklyTotal(weekStartDate);
+        setIsLoading(true);
+        setMessage("Calculating weekly total...");
+
+        const contract = new ethers.Contract(contractAddress, ConstructionExpenseLedgerABI, ethersSigner);
+
+        // Estimate gas first
+        let gasEstimate;
+        try {
+          gasEstimate = await contract.calculateWeeklyTotal.estimateGas(weekStartDate);
+          console.log("[useExpenseLedger] Gas estimate for weekly total:", gasEstimate.toString());
+        } catch (estimateError: any) {
+          console.error("[useExpenseLedger] Gas estimation failed:", estimateError);
+          gasEstimate = BigInt(10000000);
+        }
+
+        // Add 20% buffer to gas estimate
+        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+
+        setMessage("Submitting transaction...");
+        const tx = await contract.calculateWeeklyTotal(weekStartDate, {
+          gasLimit: gasLimit.toString(),
+        });
+
+        console.log("[useExpenseLedger] Weekly total transaction sent:", tx.hash);
+        setMessage("Waiting for transaction confirmation...");
+        const receipt = await tx.wait();
+        console.log("[useExpenseLedger] Weekly total transaction confirmed, block:", receipt.blockNumber);
+
+        // Wait a bit for state to be updated and permissions to be set
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Read the calculated weekly total from contract using view function
+        setMessage("Reading weekly total from contract...");
+        // Use staticCall to read the result without sending a transaction
+        const readContract = new ethers.Contract(contractAddress, ConstructionExpenseLedgerABI, ethersProvider);
+        const [totalMaterial, totalLabor, totalRental, exists] = await readContract.getWeeklyTotal.staticCall(weekStartDate);
+        
+        if (!exists) {
+          throw new Error("Weekly total calculation completed but result not found");
+        }
+
+        setMessage("Weekly total calculated successfully!");
         
         return {
           materialCost: ethers.hexlify(totalMaterial),
           laborCost: ethers.hexlify(totalLabor),
           rentalCost: ethers.hexlify(totalRental),
         };
-      } catch (error) {
-        console.error("Error calculating weekly total:", error);
-        return null;
+      } catch (error: any) {
+        console.error("[useExpenseLedger] Error calculating weekly total:", error);
+        const errorMessage = error.reason || error.message || String(error);
+        setMessage(`Error: ${errorMessage}`);
+        throw error;
+      } finally {
+        setIsLoading(false);
       }
     },
-    [contractAddress, ethersProvider]
+    [contractAddress, ethersSigner, ethersProvider]
   );
 
   const decryptExpense = useCallback(
