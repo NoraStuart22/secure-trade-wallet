@@ -284,23 +284,41 @@ export function useExpenseLedger(contractAddress: string | undefined): UseExpens
         console.log("[useExpenseLedger] Weekly total transaction confirmed, block:", receipt.blockNumber);
 
         // Wait a bit for state to be updated and permissions to be set
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // FHE operations may need more time to set permissions
+        setMessage("Waiting for state update and permissions...");
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         // Read the calculated weekly total from contract using view function
         setMessage("Reading weekly total from contract...");
         const readContract = new ethers.Contract(contractAddress, ConstructionExpenseLedgerABI, ethersProvider);
         
         // Call the view function directly (it's a view function, so it won't send a transaction)
+        // Retry logic in case the state hasn't fully updated yet
         let totalMaterial, totalLabor, totalRental, exists;
-        try {
-          [totalMaterial, totalLabor, totalRental, exists] = await readContract.getWeeklyTotal(weekStartDate);
-        } catch (readError: any) {
-          console.error("[useExpenseLedger] Error reading weekly total:", readError);
-          // If reading fails, the weekly total might not exist yet
-          throw new Error("Failed to read weekly total. The calculation may not have completed successfully.");
+        let retries = 3;
+        let lastError;
+        
+        while (retries > 0) {
+          try {
+            [totalMaterial, totalLabor, totalRental, exists] = await readContract.getWeeklyTotal(weekStartDate);
+            if (exists) {
+              break; // Success, exit retry loop
+            }
+          } catch (readError: any) {
+            lastError = readError;
+            console.warn(`[useExpenseLedger] Error reading weekly total (${retries} retries left):`, readError);
+            if (retries > 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          retries--;
         }
         
-        if (!exists) {
+        if (!exists || retries === 0) {
+          if (lastError) {
+            console.error("[useExpenseLedger] Final error reading weekly total:", lastError);
+            throw new Error(`Failed to read weekly total after retries: ${lastError.message || String(lastError)}`);
+          }
           throw new Error("Weekly total calculation completed but result not found");
         }
 
