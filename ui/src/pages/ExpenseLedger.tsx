@@ -176,27 +176,60 @@ export default function ExpenseLedger() {
         toast.info("No expense recorded for this date");
       } else if (expense && expense.exists && isProjectManager) {
         // Auto-decrypt for project manager
+        console.log("[ExpenseLedger] Starting auto-decrypt for daily expenses");
+        console.log("[ExpenseLedger] Encrypted values:", {
+          material: expense.materialCost,
+          labor: expense.laborCost,
+          rental: expense.rentalCost,
+        });
+        
         toast.info("Decrypting daily expenses...");
         try {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Wait for permissions to be set
+          await new Promise(resolve => setTimeout(resolve, 3000));
           
-          const [material, labor, rental] = await Promise.all([
-            decryptExpense(expense.materialCost),
-            decryptExpense(expense.laborCost),
-            decryptExpense(expense.rentalCost),
-          ]);
+          console.log("[ExpenseLedger] Decrypting material...");
+          const material = await decryptExpense(expense.materialCost);
+          console.log("[ExpenseLedger] Material decrypted:", material);
           
-          setDecryptedValues((prev) => ({
-            ...prev,
-            material,
-            labor,
-            rental,
-          }));
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          console.log("[ExpenseLedger] Decrypting labor...");
+          const labor = await decryptExpense(expense.laborCost);
+          console.log("[ExpenseLedger] Labor decrypted:", labor);
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          console.log("[ExpenseLedger] Decrypting rental...");
+          const rental = await decryptExpense(expense.rentalCost);
+          console.log("[ExpenseLedger] Rental decrypted:", rental);
+          
+          console.log("[ExpenseLedger] All values decrypted:", { material, labor, rental });
+          
+          setDecryptedValues((prev) => {
+            const newValues = {
+              ...prev,
+              material,
+              labor,
+              rental,
+            };
+            console.log("[ExpenseLedger] Setting decrypted values:", newValues);
+            return newValues;
+          });
+          
+          // Verify state was updated
+          setTimeout(() => {
+            console.log("[ExpenseLedger] Current decryptedValues after update:", decryptedValues);
+          }, 100);
           
           toast.success(`Decrypted: Material $${material}, Labor $${labor}, Rental $${rental}`);
         } catch (decryptError: any) {
           console.error("[ExpenseLedger] Auto-decrypt error:", decryptError);
-          toast.warning("Expenses loaded, but decryption failed. You can try decrypting manually.");
+          console.error("[ExpenseLedger] Error details:", {
+            message: decryptError.message,
+            stack: decryptError.stack,
+          });
+          toast.warning(`Decryption failed: ${decryptError.message || "Unknown error"}. You can try decrypting manually.`);
         }
       }
     } catch (error: any) {
@@ -487,13 +520,18 @@ export default function ExpenseLedger() {
                               <p className="text-3xl font-bold text-green-600 mb-2">
                                 ${decryptedValues.material.toLocaleString()}
                               </p>
-                              <p className="text-xs text-muted-foreground font-mono break-all">
-                                {dailyExpense.materialCost}
-                              </p>
+                              <details className="mt-2">
+                                <summary className="text-xs text-muted-foreground cursor-pointer">
+                                  View encrypted value
+                                </summary>
+                                <p className="text-xs text-muted-foreground font-mono break-all mt-1">
+                                  {dailyExpense.materialCost}
+                                </p>
+                              </details>
                             </div>
                           ) : (
                             <div>
-                              <p className="text-xs font-mono break-all mb-2">
+                              <p className="text-xs font-mono break-all mb-2 text-gray-700">
                                 {dailyExpense.materialCost}
                               </p>
                               {isProjectManager && (
@@ -522,13 +560,18 @@ export default function ExpenseLedger() {
                               <p className="text-3xl font-bold text-green-600 mb-2">
                                 ${decryptedValues.labor.toLocaleString()}
                               </p>
-                              <p className="text-xs text-muted-foreground font-mono break-all">
-                                {dailyExpense.laborCost}
-                              </p>
+                              <details className="mt-2">
+                                <summary className="text-xs text-muted-foreground cursor-pointer">
+                                  View encrypted value
+                                </summary>
+                                <p className="text-xs text-muted-foreground font-mono break-all mt-1">
+                                  {dailyExpense.laborCost}
+                                </p>
+                              </details>
                             </div>
                           ) : (
                             <div>
-                              <p className="text-xs font-mono break-all mb-2">
+                              <p className="text-xs font-mono break-all mb-2 text-gray-700">
                                 {dailyExpense.laborCost}
                               </p>
                               {isProjectManager && (
@@ -557,13 +600,18 @@ export default function ExpenseLedger() {
                               <p className="text-3xl font-bold text-green-600 mb-2">
                                 ${decryptedValues.rental.toLocaleString()}
                               </p>
-                              <p className="text-xs text-muted-foreground font-mono break-all">
-                                {dailyExpense.rentalCost}
-                              </p>
+                              <details className="mt-2">
+                                <summary className="text-xs text-muted-foreground cursor-pointer">
+                                  View encrypted value
+                                </summary>
+                                <p className="text-xs text-muted-foreground font-mono break-all mt-1">
+                                  {dailyExpense.rentalCost}
+                                </p>
+                              </details>
                             </div>
                           ) : (
                             <div>
-                              <p className="text-xs font-mono break-all mb-2">
+                              <p className="text-xs font-mono break-all mb-2 text-gray-700">
                                 {dailyExpense.rentalCost}
                               </p>
                               {isProjectManager && (
