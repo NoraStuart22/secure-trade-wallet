@@ -34,23 +34,32 @@ const localhost = defineChain({
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '3fbb6bba6f1de962d911bb5b5c9ddd26';
 
 // Suppress console warnings for WalletConnect 403 errors in development
-// This must be done BEFORE getDefaultConfig is called
+// Note: Network 403 errors in browser DevTools cannot be suppressed,
+// but console.error/warn messages can be filtered
 if (import.meta.env.DEV) {
+  // Store original console methods
   const originalError = console.error;
   const originalWarn = console.warn;
+  const originalLog = console.log;
   
+  // Override console.error
   console.error = (...args: any[]) => {
-    const message = args[0]?.toString() || '';
-    const fullMessage = args.map(arg => String(arg)).join(' ');
+    const fullMessage = args.map(arg => {
+      if (typeof arg === 'string') return arg;
+      if (arg?.message) return arg.message;
+      if (arg?.stack) return arg.stack;
+      return String(arg);
+    }).join(' ');
     
     // Filter out WalletConnect/Reown 403 warnings
     if (
-      message.includes('Reown Config') ||
-      message.includes('Failed to fetch remote project configuration') ||
+      fullMessage.includes('Reown Config') ||
+      fullMessage.includes('Failed to fetch remote project configuration') ||
       fullMessage.includes('HTTP status code: 403') ||
       fullMessage.includes('not found on Allowlist') ||
       fullMessage.includes('api.web3modal.org') ||
-      fullMessage.includes('pulse.walletconnect.org')
+      fullMessage.includes('pulse.walletconnect.org') ||
+      fullMessage.includes('web3modal.org')
     ) {
       // Silently ignore these expected warnings
       return;
@@ -58,20 +67,38 @@ if (import.meta.env.DEV) {
     originalError.apply(console, args);
   };
   
+  // Override console.warn
   console.warn = (...args: any[]) => {
-    const message = args[0]?.toString() || '';
-    const fullMessage = args.map(arg => String(arg)).join(' ');
+    const fullMessage = args.map(arg => {
+      if (typeof arg === 'string') return arg;
+      if (arg?.message) return arg.message;
+      return String(arg);
+    }).join(' ');
     
     // Filter out WalletConnect/Reown warnings
     if (
       fullMessage.includes('Reown') ||
       fullMessage.includes('WalletConnect') ||
       fullMessage.includes('web3modal') ||
-      fullMessage.includes('403')
+      fullMessage.includes('403') ||
+      fullMessage.includes('Allowlist')
     ) {
       return;
     }
     originalWarn.apply(console, args);
+  };
+  
+  // Also filter console.log for any WalletConnect messages
+  console.log = (...args: any[]) => {
+    const fullMessage = args.map(arg => String(arg)).join(' ');
+    if (
+      fullMessage.includes('Reown Config') ||
+      fullMessage.includes('web3modal.org') ||
+      (fullMessage.includes('403') && fullMessage.includes('WalletConnect'))
+    ) {
+      return;
+    }
+    originalLog.apply(console, args);
   };
 }
 
