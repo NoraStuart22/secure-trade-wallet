@@ -220,12 +220,21 @@ export default function ExpenseLedger() {
             
             console.log("[ExpenseLedger] All decrypted values:", { material, labor, rental });
             
-            setDecryptedValues((prev) => ({
-              ...prev,
+            // Force state update with a new object to ensure React detects the change
+            const newDecryptedValues = {
+              ...decryptedValues,
               weeklyMaterial: material,
               weeklyLabor: labor,
               weeklyRental: rental,
-            }));
+            };
+            
+            console.log("[ExpenseLedger] Setting decrypted values:", newDecryptedValues);
+            setDecryptedValues(newDecryptedValues);
+            
+            // Double check the state was updated
+            setTimeout(() => {
+              console.log("[ExpenseLedger] Current decryptedValues after update:", decryptedValues);
+            }, 100);
             
             console.log("[ExpenseLedger] ✓ State updated with decrypted values");
             toast.success(`Weekly totals decrypted: Material $${material}, Labor $${labor}, Rental $${rental}`);
@@ -512,6 +521,55 @@ export default function ExpenseLedger() {
 
                 {weeklyTotal && (
                   <div className="space-y-4 pt-4">
+                    {isProjectManager && (
+                      decryptedValues.weeklyMaterial === undefined ||
+                      decryptedValues.weeklyLabor === undefined ||
+                      decryptedValues.weeklyRental === undefined
+                    ) && (
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 mb-3 font-medium">
+                          Decrypt weekly totals to view the actual amounts
+                        </p>
+                        <Button
+                          onClick={async () => {
+                            if (!weeklyTotal) return;
+                            try {
+                              toast.info("Decrypting all weekly totals...");
+                              setIsLoading(true);
+                              
+                              // Wait a bit for permissions
+                              await new Promise(resolve => setTimeout(resolve, 2000));
+                              
+                              const [material, labor, rental] = await Promise.all([
+                                decryptExpense(weeklyTotal.materialCost),
+                                decryptExpense(weeklyTotal.laborCost),
+                                decryptExpense(weeklyTotal.rentalCost),
+                              ]);
+                              
+                              setDecryptedValues((prev) => ({
+                                ...prev,
+                                weeklyMaterial: material,
+                                weeklyLabor: labor,
+                                weeklyRental: rental,
+                              }));
+                              
+                              toast.success(`Decrypted: Material $${material}, Labor $${labor}, Rental $${rental}`);
+                            } catch (error: any) {
+                              console.error("[ExpenseLedger] Manual decrypt error:", error);
+                              toast.error(`Decryption failed: ${error.message || "Unknown error"}`);
+                            } finally {
+                              setIsLoading(false);
+                            }
+                          }}
+                          disabled={isLoading}
+                          className="w-full"
+                          size="lg"
+                        >
+                          <Unlock className="h-4 w-4 mr-2" />
+                          Decrypt All Weekly Totals
+                        </Button>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Card>
                         <CardHeader>
