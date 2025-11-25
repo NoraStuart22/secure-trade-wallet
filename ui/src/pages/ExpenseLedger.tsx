@@ -535,7 +535,6 @@ export default function ExpenseLedger() {
                             if (!weeklyTotal) return;
                             try {
                               toast.info("Decrypting all weekly totals...");
-                              setIsLoading(true);
                               
                               // Wait a bit for permissions
                               await new Promise(resolve => setTimeout(resolve, 2000));
@@ -557,8 +556,6 @@ export default function ExpenseLedger() {
                             } catch (error: any) {
                               console.error("[ExpenseLedger] Manual decrypt error:", error);
                               toast.error(`Decryption failed: ${error.message || "Unknown error"}`);
-                            } finally {
-                              setIsLoading(false);
                             }
                           }}
                           disabled={isLoading}
