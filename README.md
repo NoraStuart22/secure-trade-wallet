@@ -1,14 +1,23 @@
-# Trust Build Ledger - Encrypted Construction Expense Ledger
+# EncryptedBid - Privacy-Preserving Bidding System
 
-A privacy-preserving construction expense ledger built with FHEVM (Fully Homomorphic Encryption Virtual Machine) that allows recording encrypted daily expenses (material, labor, rental costs) on-chain. Expenses remain private, and only the project manager can decrypt and view the details.
+A privacy-preserving encrypted bidding system built with FHEVM (Fully Homomorphic Encryption Virtual Machine) that allows suppliers to submit encrypted bids without revealing prices. The system can find the lowest bid using FHE operations without decrypting individual bids.
 
 ## Features
 
-- **🔒 Encrypted Expense Recording**: Record material, labor, and rental costs with FHE encryption
-- **➕ FHE Calculation**: Automatically calculate weekly totals in encrypted state
-- **🔐 Private Decryption**: Only project manager can decrypt and view expense details
+- **🔒 Encrypted Bid Submission**: Submit bid prices with FHE encryption
+- **🔍 FHE Comparison**: Find the lowest bid without decrypting individual prices
+- **🔐 Private Decryption**: Only the organizer can decrypt bids
 - **💼 Rainbow Wallet Integration**: Seamless wallet connection using RainbowKit
 - **🌐 Multi-Network Support**: Works on local Hardhat network and Sepolia testnet
+
+## Business Use Case
+
+**Application Scenario**: Multiple suppliers submit bids without revealing prices.
+
+- **Create**: Submit your bid amount
+- **Encrypt**: Bid price is encrypted before upload
+- **FHE Operations**: Contract compares prices in encrypted state and finds the lowest bid
+- **Business Value**: Prevents competitors from seeing each other's bids, ensuring fair tender process
 
 ## Quick Start
 
@@ -46,200 +55,133 @@ A privacy-preserving construction expense ledger built with FHEVM (Fully Homomor
    npm run typechain
    ```
 
-4. **Configure environment variables**
+4. **Start local Hardhat node and deploy**
+
+   ```bash
+   # Option 1: Start node and deploy in one command
+   .\start-and-deploy.ps1
+
+   # Option 2: Start node separately
+   .\start-hardhat-node.ps1
+   # Then in another terminal:
+   npx hardhat deploy --network localhost
+   ```
+
+5. **Configure frontend contract address**
+
+   After deployment, get the contract address from `deployments/localhost/EncryptedBidding.json` and set it:
 
    ```bash
    cd ui
-   # Copy the example env file
-   cp .env.local.example .env.local
-   
-   # Edit .env.local and add:
-   # - VITE_WALLETCONNECT_PROJECT_ID (optional for local dev, required for production)
-   #   Get a free Project ID from https://cloud.walletconnect.com/
-   #   Add http://localhost:8080 to the allowlist in project settings
-   # - VITE_CONTRACT_ADDRESS (after deployment)
+   # Create .env file
+   echo "VITE_CONTRACT_ADDRESS=<contract_address>" > .env
    ```
 
-5. **Deploy to local network**
-
-   ```bash
-   # Terminal 1: Start a local FHEVM-ready node
-   npx hardhat node
-
-   # Terminal 2: Deploy to local network
-   npx hardhat deploy --network localhost
-
-   # Copy the deployed contract address and update ui/.env.local
-   # VITE_CONTRACT_ADDRESS=0x...
-   ```
-
-5. **Start frontend**
+6. **Start frontend development server**
 
    ```bash
    cd ui
    npm run dev
    ```
 
-6. **Connect wallet and test**
+## Testing
 
-   - Open the app in your browser
-   - Connect wallet to localhost network (Chain ID: 31337)
-   - Record daily expenses (material, labor, rental costs)
-   - View encrypted expenses
-   - As project manager, decrypt expenses to verify encryption/decryption
+### Local Testing
 
-7. **Run tests**
+Run tests against local Hardhat network:
+
+```bash
+npm test
+```
+
+This will run `test/EncryptedBidding.ts` which tests:
+- Bid submission
+- Multiple bidders
+- Bid retrieval
+- Decryption (organizer only)
+- Finding lowest bid using FHE operations
+- Bid updates
+
+### Sepolia Testnet Testing
+
+1. Deploy to Sepolia:
 
    ```bash
-   # Local network tests
-   npm run test
+   npx hardhat deploy --network sepolia
+   ```
 
-   # Sepolia testnet tests (after deployment)
+2. Run Sepolia tests:
+
+   ```bash
    npm run test:sepolia
    ```
+
+## Contract Functions
+
+### `submitBid(externalEuint32 encryptedPrice, bytes calldata inputProof)`
+Submit an encrypted bid. Bidders can update their bid by submitting again.
+
+### `getBid(address bidder)`
+Get the encrypted bid for a specific bidder address.
+
+### `findLowestBid()`
+Calculate the lowest bid among all submitted bids using FHE operations.
+
+### `getLowestBid()`
+Get the encrypted lowest bid (after `findLowestBid()` has been called).
+
+### `getAllBidders()`
+Get all addresses that have submitted bids.
+
+### `hasBid(address bidder)`
+Check if an address has submitted a bid.
+
+## Frontend Usage
+
+1. **Connect Wallet**: Click the "Connect Wallet" button in the top right corner
+2. **Submit Bid**: Enter your bid price and click "Submit Bid"
+3. **View Bids**: See all submitted bids (encrypted)
+4. **Decrypt Bids** (Organizer only): Click "Decrypt" to view the actual bid price
+5. **Find Lowest Bid**: Click "Find Lowest Bid" to calculate the minimum using FHE operations
+6. **Decrypt Lowest Bid** (Organizer only): Decrypt the calculated lowest bid
 
 ## Project Structure
 
 ```
-trust-build-ledger/
-├── contracts/                           # Smart contract source files
-│   └── ConstructionExpenseLedger.sol   # Main expense ledger contract
-├── deploy/                              # Deployment scripts
-│   └── deploy_ConstructionExpenseLedger.ts
-├── test/                                # Test files
-│   ├── ConstructionExpenseLedger.ts    # Local network tests
-│   └── ConstructionExpenseLedgerSepolia.ts # Sepolia testnet tests
-├── ui/                                  # Frontend React application
+secure-trade-wallet/
+├── contracts/
+│   └── EncryptedBidding.sol      # Main contract
+├── deploy/
+│   └── deploy_EncryptedBidding.ts # Deployment script
+├── test/
+│   ├── EncryptedBidding.ts        # Local tests
+│   └── EncryptedBiddingSepolia.ts # Sepolia tests
+├── ui/
 │   ├── src/
-│   │   ├── components/                 # React components
-│   │   ├── hooks/                       # Custom React hooks
-│   │   │   ├── useExpenseLedger.tsx    # Main contract interaction hook
-│   │   │   └── useFhevm.tsx             # FHEVM instance management
-│   │   ├── fhevm/                       # FHEVM utilities
-│   │   ├── pages/                      # Page components
-│   │   │   └── ExpenseLedger.tsx       # Main expense ledger page
-│   │   └── providers/                  # React providers
-│   │       └── WalletProvider.tsx       # Rainbow wallet provider
-│   └── public/                         # Static assets
-│       └── logo.svg                    # App logo
-├── hardhat.config.ts                   # Hardhat configuration
-└── package.json                        # Dependencies and scripts
+│   │   ├── hooks/
+│   │   │   └── useBidding.tsx    # Frontend hook for contract interaction
+│   │   ├── pages/
+│   │   │   └── Index.tsx         # Main bidding UI
+│   │   └── components/
+│   │       └── Header.tsx         # Header with wallet connect
+│   └── public/
+│       └── logo.svg               # App logo
+└── types/                         # TypeScript types (generated)
 ```
 
-## Smart Contract
+## Security Notes
 
-### ConstructionExpenseLedger.sol
-
-The main smart contract that handles encrypted expense storage and calculation using FHEVM.
-
-#### Key Functions
-
-- **`recordDailyExpense(uint256 date, externalEuint32 encryptedMaterialCost, externalEuint32 encryptedLaborCost, externalEuint32 encryptedRentalCost, bytes calldata inputProof)`**: 
-  - Records encrypted daily expenses (material, labor, rental costs)
-  - Accumulates expenses if the same date is recorded multiple times
-  - Grants decryption permissions to project manager
-
-- **`getDailyExpense(uint256 date)`**: 
-  - Returns encrypted expenses for a specific date
-  - Returns three encrypted values: material, labor, rental costs
-
-- **`calculateWeeklyTotal(uint256 weekStartDate)`**: 
-  - Calculates encrypted weekly totals for 7 days starting from weekStartDate
-  - Performs FHE addition on encrypted values
-  - Returns encrypted totals for material, labor, and rental costs
-
-- **`projectManager()`**: 
-  - Returns the address of the project manager who can decrypt expenses
-
-## Frontend Usage
-
-### Components
-
-1. **Record Expense Tab**: 
-   - Input date and three expense types (material, labor, rental)
-   - Encrypts and submits to contract
-   - Shows transaction status
-
-2. **View Expenses Tab**: 
-   - Displays encrypted expenses for a specific date
-   - Decrypt button (only for project manager) to view decrypted values
-   - Shows encrypted handles
-
-3. **Weekly Total Tab**: 
-   - Calculate encrypted weekly totals
-   - Decrypt button (only for project manager) to view decrypted totals
-
-### Workflow
-
-1. **Connect Wallet**: Click Rainbow wallet button in top right
-2. **Record Expense**: 
-   - Enter date and expense amounts
-   - Click "Record Expense"
-   - Wait for transaction confirmation
-3. **View Expenses**: 
-   - Select date and click "Load"
-   - View encrypted handles
-   - As project manager, click "Decrypt" to view actual values
-4. **Calculate Weekly Total**: 
-   - Select week start date
-   - Click "Calculate"
-   - As project manager, decrypt to view totals
-
-## Testing
-
-### Local Network Testing
-
-```bash
-# Start local Hardhat node with FHEVM support
-npx hardhat node
-
-# In another terminal, run tests
-npm run test
-```
-
-Tests verify:
-- Contract initialization with project manager
-- Encrypted expense recording
-- Expense accumulation for same date
-- Weekly total calculation
-- Decryption functionality (as project manager)
-
-### Sepolia Testnet Testing
-
-```bash
-# Deploy contract first
-npx hardhat deploy --network sepolia
-
-# Then run Sepolia-specific tests
-npm run test:sepolia
-```
-
-## Technical Details
-
-### FHEVM Integration
-
-- **SDK Loading**: Dynamically loads FHEVM Relayer SDK from CDN
-- **Instance Creation**: Creates FHEVM instance based on network (mock for local, relayer for Sepolia)
-- **Public Key Storage**: Uses IndexedDB to cache public keys and parameters
-- **Decryption Signatures**: Uses EIP712 signatures for decryption requests
-
-### Security Features
-
-1. **Input Proof Verification**: All encrypted inputs include cryptographic proofs verified by the contract
-2. **Access Control**: Only project manager can decrypt encrypted values
-3. **Privacy Preservation**: Actual expense amounts are never revealed on-chain
-4. **EIP712 Signatures**: Decryption requests require cryptographic signatures
-
-### Network Support
-
-- **Localhost (31337)**: For development and testing with mock FHEVM
-- **Sepolia Testnet (11155111)**: For public testing with Zama FHE relayer
-- **Mainnet**: Ready for production deployment (with proper configuration)
+- All bid prices are encrypted using FHE before submission
+- Only the contract organizer (deployer) can decrypt bids
+- The lowest bid calculation uses FHE operations, so individual prices are never revealed during comparison
+- Bidders can update their bids by submitting again
 
 ## License
 
-This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.
+BSD-3-Clause-Clear
 
----
+## Resources
 
-**Built with ❤️ using [Zama FHEVM](https://docs.zama.ai/fhevm)**
+- [FHEVM Documentation](https://docs.zama.ai/fhevm)
+- [Hardhat Documentation](https://hardhat.org/docs)
+- [RainbowKit Documentation](https://rainbowkit.com/)

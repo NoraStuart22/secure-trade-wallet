@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import { Lock, DollarSign } from "lucide-react";
 
 export const Logo = ({ className = "" }: { className?: string }) => {
   return (
@@ -12,26 +12,41 @@ export const Logo = ({ className = "" }: { className?: string }) => {
           xmlns="http://www.w3.org/2000/svg"
           className="transition-transform duration-300 hover:scale-105"
         >
-          {/* Shield */}
+          {/* Circle background */}
+          <circle cx="20" cy="20" r="18" fill="hsl(var(--accent))" className="opacity-20" />
+          {/* Lock icon */}
           <path
-            d="M20 4L8 10V18C8 26 13 33 20 36C27 33 32 26 32 18V10L20 4Z"
-            fill="hsl(var(--secondary))"
+            d="M15 18V16C15 13.7909 16.7909 12 19 12H21C23.2091 12 25 13.7909 25 16V18"
+            stroke="hsl(var(--accent))"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <rect
+            x="13"
+            y="18"
+            width="14"
+            height="10"
+            rx="2"
+            fill="hsl(var(--accent))"
             className="opacity-90"
           />
-          {/* Handshake */}
+          {/* Dollar sign */}
           <path
-            d="M14 20C14 20 15 19 16.5 19C18 19 19 20 20 20C21 20 22 19 23.5 19C25 19 26 20 26 20L24 24H16L14 20Z"
-            fill="hsl(var(--primary))"
+            d="M20 14V26"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
           />
           <path
-            d="M16 21L18 19L20 20L22 19L24 21"
+            d="M17 17C17 16.4477 17.4477 16 18 16H19C19.5523 16 20 16.4477 20 17C20 17.5523 19.5523 18 19 18H18C17.4477 18 17 18.4477 17 19C17 19.5523 17.4477 20 18 20H19C19.5523 20 20 20.4477 20 21"
             stroke="white"
             strokeWidth="1.5"
             strokeLinecap="round"
           />
         </svg>
       </div>
-      <span className="text-xl font-bold text-foreground">SecureTrade</span>
+      <span className="text-xl font-bold text-foreground">EncryptedBid</span>
     </div>
   );
 };
